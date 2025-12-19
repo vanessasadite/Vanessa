@@ -14,6 +14,7 @@ const USUARIOS_AUTORIZADOS = [
   { email: 'admin@nutricalc.com', chave: 'NUTRI123' }, // Seu acesso
   { email: 'teste@exemplo.com', chave: 'ALUNO2025' },  // Exemplo de aluno
   // { email: 'contato@cliente.com', chave: '9988' },
+  { email: 'nesschmidt@gmail.com', chave: '1234' }
 ];
 
 const LandingPage: React.FC<{ onUnlock: (email: string) => void }> = ({ onUnlock }) => {
