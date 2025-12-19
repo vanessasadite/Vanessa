@@ -2,13 +2,13 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { FoodItem } from "./types";
 
-const MODEL_SEARCH = "gemini-3-pro-preview";
-const MODEL_SUGGEST = "gemini-3-flash-preview";
+const MODEL_NAME = "gemini-3-flash-preview";
 
 /**
- * Limpa strings de resposta da IA que podem vir com markdown de JSON
+ * Garante que a string recebida seja um JSON limpo
  */
 const cleanJsonResponse = (text: string) => {
+  if (!text) return "";
   return text.replace(/```json/g, "").replace(/```/g, "").trim();
 };
 
@@ -19,11 +19,12 @@ export const getFoodSuggestions = async (query: string): Promise<string[]> => {
   const ai = new GoogleGenAI({ apiKey });
   try {
     const response = await ai.models.generateContent({
-      model: MODEL_SUGGEST,
-      contents: `Liste apenas 5 nomes de alimentos brasileiros comuns (como arroz, feijão, frango) que comecem ou contenham "${query}". Retorne apenas um array JSON de strings ["item1", "item2", ...].`,
+      model: MODEL_NAME,
+      contents: `Liste 5 alimentos brasileiros comuns (como arroz, frango, feijão) que contenham "${query}". Retorne apenas um array JSON: ["item1", "item2", ...]`,
       config: { responseMimeType: "application/json" }
     });
-    return JSON.parse(cleanJsonResponse(response.text || "[]"));
+    const cleaned = cleanJsonResponse(response.text);
+    return JSON.parse(cleaned || "[]");
   } catch (e) {
     return [];
   }
@@ -39,31 +40,24 @@ export const searchFoodNutrition = async (
 
   const ai = new GoogleGenAI({ apiKey });
 
-  // Prompt ultra-descritivo para evitar falhas em alimentos básicos
-  const prompt = `Aja como um Nutricionista calculando dieta com precisão.
-  
-  OBJETIVO: Fornecer os dados nutricionais exatos para: ${quantity} ${unit} de "${foodName}".
-  
-  INSTRUÇÕES CRÍTICAS:
-  1. Use prioritariamente a Tabela TACO (4ª Edição) ou TBCA.
-  2. Se o usuário digitar algo genérico como "Arroz", assuma "Arroz branco, cozido" da TACO.
-  3. Se o usuário digitar "Frango", assuma "Peito de frango, sem pele, grelhado/cozido".
-  4. Converta unidades (fatias, colheres) para gramas antes de calcular (Ex: 1 fatia de pão = 25g).
-  5. NUNCA RETORNE ERRO. Se não souber o exato, use a estimativa mais segura para o alimento mais similar.
+  const prompt = `Retorne os dados nutricionais para ${quantity} ${unit} de "${foodName}".
+  PRIORIDADE: Tabela TACO (Brasil) ou TBCA.
+  Se for algo genérico (ex: Arroz), use os valores de "Arroz branco, cozido" da TACO.
+  JAMAIS retorne erro. Estime os valores se necessário.
 
-  RESPOSTA (JSON estrito):
+  Retorne APENAS o JSON com estes campos:
   {
-    "name": "Nome do Alimento (Ex: Arroz Branco Cozido)",
-    "calories": valor_kcal,
-    "carbs": gramas_carboidrato,
-    "protein": gramas_proteina,
-    "lipids": gramas_gordura,
-    "source": "TACO ou TBCA"
+    "name": string (nome oficial da tabela),
+    "calories": number (kcal totais),
+    "carbs": number (g),
+    "protein": number (g),
+    "lipids": number (g),
+    "source": "TACO"
   }`;
 
   try {
     const response = await ai.models.generateContent({
-      model: MODEL_SEARCH,
+      model: MODEL_NAME,
       contents: prompt,
       config: {
         responseMimeType: "application/json",
@@ -82,10 +76,11 @@ export const searchFoodNutrition = async (
       }
     });
 
-    const text = cleanJsonResponse(response.text || "null");
-    return JSON.parse(text);
+    const cleaned = cleanJsonResponse(response.text);
+    if (!cleaned) return null;
+    return JSON.parse(cleaned);
   } catch (error) {
-    console.error("Erro na consulta Gemini:", error);
+    console.error("Erro na busca:", error);
     return null;
   }
 };
