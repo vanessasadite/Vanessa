@@ -2,7 +2,9 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { FoodItem } from "./types";
 
-const MODEL_NAME = "gemini-3-flash-preview";
+// Usando o Pro para garantir que as instruções de tabelas sejam seguidas à risca
+const MODEL_NAME_SEARCH = "gemini-3-pro-preview";
+const MODEL_NAME_SUGGEST = "gemini-3-flash-preview";
 
 export const getFoodSuggestions = async (query: string): Promise<string[]> => {
   const apiKey = process.env.API_KEY;
@@ -11,11 +13,9 @@ export const getFoodSuggestions = async (query: string): Promise<string[]> => {
   const ai = new GoogleGenAI({ apiKey });
   try {
     const response = await ai.models.generateContent({
-      model: MODEL_NAME,
-      contents: `Liste 5 alimentos da tabela TACO ou TBCA que comecem ou contenham "${query}". Retorne apenas uma lista de strings em JSON ["item1", "item2", ...].`,
-      config: {
-        responseMimeType: "application/json",
-      }
+      model: MODEL_NAME_SUGGEST,
+      contents: `Liste 5 nomes de alimentos que aparecem na tabela TACO (Brasil) e que contenham "${query}". Retorne APENAS um JSON: ["item1", "item2", ...]`,
+      config: { responseMimeType: "application/json" }
     });
     return JSON.parse(response.text || "[]");
   } catch (e) {
@@ -33,28 +33,28 @@ export const searchFoodNutrition = async (
 
   const ai = new GoogleGenAI({ apiKey });
 
-  const prompt = `Aja como um nutricionista calculando dieta.
-  ALIMENTO: "${foodName}"
-  QUANTIDADE: ${quantity} ${unit}
-  
-  PROCEDIMENTO:
-  1. Localize este alimento prioritariamente na TACO (Tabela Brasileira de Composição de Alimentos) ou TBCA.
-  2. Se não houver, use Tucunduva, IBGE ou USDA.
-  3. Se a unidade for "fatias", "unidades" ou "colheres", converta para gramas usando pesos médios brasileiros oficiais.
-  
-  RETORNO (JSON estrito):
+  const prompt = `Você é um nutricionista especialista em tabelas brasileiras.
+  Calcule a nutrição para: ${quantity} ${unit} de "${foodName}".
+
+  DIRETRIZES:
+  1. Prioridade Máxima: Tabela TACO (4ª Edição) ou TBCA.
+  2. Secundária: Tucunduva, IBGE ou USDA.
+  3. Se o alimento for "fatias" ou "unidades", use o peso médio de referência (ex: Pão de forma = 25g/fatia).
+  4. JAMAIS retorne vazio. Se não houver o item exato, use o item mais próximo (ex: se não houver "Arroz X", use "Arroz Branco Cozido").
+
+  RETORNO (JSON):
   {
-    "name": "Nome exato na tabela",
+    "name": "Nome do alimento encontrado",
     "calories": kcal_totais,
-    "carbs": g_carboidrato_total,
-    "protein": g_proteina_total,
-    "lipids": g_lipideos_total,
-    "source": "Fonte da Tabela (Ex: TACO 4ª Edição)"
+    "carbs": g_carboidratos,
+    "protein": g_proteinas,
+    "lipids": g_gorduras,
+    "source": "Fonte usada (ex: TACO)"
   }`;
 
   try {
     const response = await ai.models.generateContent({
-      model: MODEL_NAME,
+      model: MODEL_NAME_SEARCH,
       contents: prompt,
       config: {
         responseMimeType: "application/json",
@@ -73,11 +73,9 @@ export const searchFoodNutrition = async (
       }
     });
 
-    const text = response.text;
-    if (!text) return null;
-    return JSON.parse(text);
+    return JSON.parse(response.text || "null");
   } catch (error) {
-    console.error("Erro na consulta nutricional:", error);
+    console.error("Erro na busca:", error);
     return null;
   }
 };
