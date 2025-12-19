@@ -14,20 +14,24 @@ export const searchFoodNutrition = async (foodName: string): Promise<Partial<Foo
   try {
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
-      contents: `Calcule as informações nutricionais para 100g de "${foodName}". 
-      Use como referência as tabelas: TACO, TBCA, USDA, IBGE e Tucunduva.
-      Importante: Retorne apenas os valores numéricos por 100g.`,
+      contents: `Você é um nutricionista especialista em tabelas brasileiras. 
+      Retorne as informações nutricionais para 100g de "${foodName}". 
+      OBRIGATÓRIO usar dados das tabelas: TACO, TBCA, USDA, IBGE ou Tucunduva.
+      Se não encontrar o valor exato, use uma média confiável dessas fontes.
+      
+      Retorne estritamente um JSON com os campos: 
+      "name" (nome claro), "calories" (kcal), "carbs" (g), "protein" (g), "lipids" (g), "source" (qual tabela foi usada).`,
       config: {
         responseMimeType: "application/json",
         responseSchema: {
           type: Type.OBJECT,
           properties: {
-            name: { type: Type.STRING, description: "Nome comum do alimento em português" },
-            calories: { type: Type.NUMBER, description: "Calorias (kcal)" },
-            carbs: { type: Type.NUMBER, description: "Carboidratos (g)" },
-            protein: { type: Type.NUMBER, description: "Proteínas (g)" },
-            lipids: { type: Type.NUMBER, description: "Gorduras/Lipídeos (g)" },
-            source: { type: Type.STRING, description: "Fonte da tabela utilizada" }
+            name: { type: Type.STRING },
+            calories: { type: Type.NUMBER },
+            carbs: { type: Type.NUMBER },
+            protein: { type: Type.NUMBER },
+            lipids: { type: Type.NUMBER },
+            source: { type: Type.STRING }
           },
           required: ["name", "calories", "carbs", "protein", "lipids", "source"]
         }
