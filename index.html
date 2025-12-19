@@ -4,7 +4,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Nutri Cal - Portal do Aluno</title>
+    <title>NutriCalc | Portal de Nutrição</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
     <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -13,9 +13,13 @@
         font-family: 'Quicksand', sans-serif;
         background-color: #fdfcf0;
         margin: 0;
+        -webkit-tap-highlight-color: transparent;
       }
-      .pastel-shadow {
-        box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.05);
+      /* Animações suaves */
+      .fade-in { animation: fadeIn 0.5s ease-out; }
+      @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
       }
     </style>
     <script type="importmap">
@@ -31,7 +35,6 @@
   }
 }
 </script>
-    <!-- Chamada do arquivo principal -->
     <script type="module" src="index.tsx"></script>
   </head>
   <body>
