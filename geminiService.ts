@@ -2,9 +2,7 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { FoodItem } from "./types";
 
-// Usando o Pro para garantir que as instruções de tabelas sejam seguidas à risca
-const MODEL_NAME_SEARCH = "gemini-3-pro-preview";
-const MODEL_NAME_SUGGEST = "gemini-3-flash-preview";
+const MODEL_NAME = "gemini-3-flash-preview";
 
 export const getFoodSuggestions = async (query: string): Promise<string[]> => {
   const apiKey = process.env.API_KEY;
@@ -13,8 +11,8 @@ export const getFoodSuggestions = async (query: string): Promise<string[]> => {
   const ai = new GoogleGenAI({ apiKey });
   try {
     const response = await ai.models.generateContent({
-      model: MODEL_NAME_SUGGEST,
-      contents: `Liste 5 nomes de alimentos que aparecem na tabela TACO (Brasil) e que contenham "${query}". Retorne APENAS um JSON: ["item1", "item2", ...]`,
+      model: MODEL_NAME,
+      contents: `Sugira 5 alimentos comuns que existam na tabela TACO (Brasil) e que comecem com "${query}". Retorne apenas um array JSON de strings.`,
       config: { responseMimeType: "application/json" }
     });
     return JSON.parse(response.text || "[]");
@@ -33,28 +31,24 @@ export const searchFoodNutrition = async (
 
   const ai = new GoogleGenAI({ apiKey });
 
-  const prompt = `Você é um nutricionista especialista em tabelas brasileiras.
-  Calcule a nutrição para: ${quantity} ${unit} de "${foodName}".
+  const prompt = `Aja como um Nutricionista. Busque os dados nutricionais de "${quantity} ${unit} de ${foodName}".
+  PRIORIDADE: Tabela TACO ou TBCA (Brasil). 
+  Se não encontrar o item exato, use o equivalente mais comum da TACO. 
+  NUNCA retorne nulo. Estime os valores se necessário baseando-se em alimentos similares.
 
-  DIRETRIZES:
-  1. Prioridade Máxima: Tabela TACO (4ª Edição) ou TBCA.
-  2. Secundária: Tucunduva, IBGE ou USDA.
-  3. Se o alimento for "fatias" ou "unidades", use o peso médio de referência (ex: Pão de forma = 25g/fatia).
-  4. JAMAIS retorne vazio. Se não houver o item exato, use o item mais próximo (ex: se não houver "Arroz X", use "Arroz Branco Cozido").
-
-  RETORNO (JSON):
+  Retorne este JSON:
   {
-    "name": "Nome do alimento encontrado",
+    "name": "Nome do Alimento",
     "calories": kcal_totais,
-    "carbs": g_carboidratos,
-    "protein": g_proteinas,
-    "lipids": g_gorduras,
-    "source": "Fonte usada (ex: TACO)"
+    "carbs": carboidratos_g,
+    "protein": proteinas_g,
+    "lipids": gorduras_g,
+    "source": "TACO"
   }`;
 
   try {
     const response = await ai.models.generateContent({
-      model: MODEL_NAME_SEARCH,
+      model: MODEL_NAME,
       contents: prompt,
       config: {
         responseMimeType: "application/json",
@@ -73,9 +67,11 @@ export const searchFoodNutrition = async (
       }
     });
 
-    return JSON.parse(response.text || "null");
+    const data = JSON.parse(response.text || "null");
+    return data;
   } catch (error) {
-    console.error("Erro na busca:", error);
+    console.error("Erro na busca Gemini:", error);
+    // Fallback manual básico para evitar que o app trave se a IA falhar
     return null;
   }
 };
