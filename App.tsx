@@ -58,7 +58,7 @@ const App: React.FC = () => {
       } else {
         setShowSuggestions(false);
       }
-    }, 300);
+    }, 400);
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
@@ -80,28 +80,31 @@ const App: React.FC = () => {
   const handleSearch = async (forcedQuery?: string) => {
     const q = forcedQuery || searchQuery;
     if (!q.trim()) return;
+    
     setLoading(true);
     setShowSuggestions(false);
+    
     try {
       const result = await searchFoodNutrition(q, portionInput, portionUnit);
-      if (result && result.name) {
+      if (result && result.name && typeof result.calories === 'number') {
         setFoods(prev => [{
           id: Math.random().toString(36).substr(2, 9),
           name: result.name!,
           calories: result.calories!,
-          carbs: result.carbs!,
-          protein: result.protein!,
-          lipids: result.lipids!,
+          carbs: result.carbs || 0,
+          protein: result.protein || 0,
+          lipids: result.lipids || 0,
           portion: portionInput,
-          source: result.source!,
+          source: result.source || 'TACO',
           meal: selectedMeal
         }, ...prev]);
         setSearchQuery('');
       } else {
-        alert("Ops! Houve uma pequena falha na conexão com as tabelas. Tente novamente o mesmo item.");
+        alert("Não conseguimos encontrar dados precisos para este alimento nas tabelas agora. Tente um termo mais comum.");
       }
     } catch (e) {
-      alert("Erro de conexão. Tente novamente.");
+      console.error(e);
+      alert("Erro ao processar a solicitação. Verifique sua chave de API ou conexão.");
     } finally {
       setLoading(false);
     }
@@ -109,7 +112,7 @@ const App: React.FC = () => {
 
   if (!userEmail) return (
     <div className="min-h-screen bg-[#fdfcf0] flex items-center justify-center p-6 text-slate-700">
-      <div className="max-w-md w-full bg-white p-10 rounded-[3rem] shadow-xl text-center fade-in">
+      <div className="max-w-md w-full bg-white p-10 rounded-[3rem] shadow-xl text-center fade-in border border-rose-50">
         <i className="fas fa-apple-whole text-5xl text-rose-300 mb-6"></i>
         <h1 className="text-3xl font-black mb-8 tracking-tight">NutriCalc</h1>
         <form onSubmit={(e) => {
@@ -119,10 +122,16 @@ const App: React.FC = () => {
           const user = USUARIOS_AUTORIZADOS.find(u => u.email === email && u.chave === pass);
           if (user) setUserEmail(user.email);
           else alert('Acesso negado.');
-        }} className="space-y-4">
-          <input ref={loginEmailRef} type="email" placeholder="E-mail" required className="w-full bg-slate-50 p-4 rounded-2xl outline-none border-2 border-transparent focus:border-rose-100 font-bold" />
-          <input ref={loginPassRef} type="password" placeholder="Chave de Acesso" required className="w-full bg-slate-50 p-4 rounded-2xl outline-none border-2 border-transparent focus:border-rose-100 font-bold" />
-          <button type="submit" className="w-full bg-slate-800 text-white font-black py-4 rounded-2xl active:scale-95 transition-all">ENTRAR</button>
+        }} className="space-y-4 text-left">
+          <div className="space-y-1">
+            <label className="text-[10px] font-black uppercase ml-2">E-mail</label>
+            <input ref={loginEmailRef} type="email" placeholder="seu@email.com" required className="w-full bg-slate-50 p-4 rounded-2xl outline-none border-2 border-transparent focus:border-rose-100 font-bold" />
+          </div>
+          <div className="space-y-1">
+            <label className="text-[10px] font-black uppercase ml-2">Chave de Acesso</label>
+            <input ref={loginPassRef} type="password" placeholder="••••••••" required className="w-full bg-slate-50 p-4 rounded-2xl outline-none border-2 border-transparent focus:border-rose-100 font-bold" />
+          </div>
+          <button type="submit" className="w-full bg-slate-800 text-white font-black py-4 rounded-2xl active:scale-95 transition-all mt-4">ACESSAR SISTEMA</button>
         </form>
       </div>
     </div>
@@ -131,19 +140,19 @@ const App: React.FC = () => {
   return (
     <div className="min-h-screen bg-[#fdfcf0] pb-12 fade-in text-slate-700">
       <div className="max-w-5xl mx-auto p-4 md:p-8">
-        <header className="mb-10 flex justify-between items-center bg-white p-6 rounded-[2rem] shadow-sm border border-rose-50/50">
+        <header className="mb-8 flex justify-between items-center bg-white p-6 rounded-[2rem] shadow-sm border border-rose-50/50">
           <div className="flex items-center gap-3">
             <i className="fas fa-apple-whole text-2xl text-rose-300"></i>
-            <h1 className="text-xl font-black">Meu NutriCalc</h1>
+            <h1 className="text-xl font-black">Calculadora Nutricional</h1>
           </div>
-          <button onClick={() => { localStorage.clear(); window.location.reload(); }} className="text-slate-300 hover:text-rose-400 p-2"><i className="fas fa-power-off"></i></button>
+          <button onClick={() => { localStorage.clear(); window.location.reload(); }} className="text-slate-300 hover:text-rose-400 p-2 transition-colors"><i className="fas fa-power-off"></i></button>
         </header>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           <div className="lg:col-span-5 space-y-6">
             {showTmbForm ? (
               <div className="bg-white p-8 rounded-[3rem] shadow-sm border border-slate-50">
-                <h2 className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-6 text-center">Calcular TMB</h2>
+                <h2 className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-6 text-center">Configurar Perfil (TMB)</h2>
                 <form onSubmit={(e) => {
                   e.preventDefault();
                   const tmbVal = gender === Gender.MALE 
@@ -175,23 +184,23 @@ const App: React.FC = () => {
                       </select>
                     </div>
                   </div>
-                  <button type="submit" className="w-full bg-rose-300 text-white font-black py-5 rounded-2xl shadow-lg hover:bg-rose-400 transition-all">SALVAR PERFIL</button>
+                  <button type="submit" className="w-full bg-rose-300 text-white font-black py-5 rounded-2xl shadow-lg hover:bg-rose-400 transition-all active:scale-95">SALVAR E CONTINUAR</button>
                 </form>
               </div>
             ) : (
               <div className="bg-white p-6 rounded-[2.5rem] shadow-sm border border-rose-50 space-y-4">
                 <div className="flex justify-between items-center px-2">
-                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Gasto Energético</span>
-                  <button onClick={() => setShowTmbForm(true)} className="text-[10px] font-black text-rose-300 underline uppercase">Editar</button>
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Resumo Energético</span>
+                  <button onClick={() => setShowTmbForm(true)} className="text-[10px] font-black text-rose-300 underline uppercase">Alterar Dados</button>
                 </div>
                 <div className="grid grid-cols-2 gap-3 text-center">
-                  <div className="bg-rose-50 p-5 rounded-3xl">
-                    <p className="text-[9px] font-black text-rose-300 uppercase mb-1">Basal</p>
-                    <p className="text-3xl font-black">{profile?.tmb?.toFixed(0)}</p>
+                  <div className="bg-rose-50 p-5 rounded-3xl border border-rose-100/30">
+                    <p className="text-[9px] font-black text-rose-300 uppercase mb-1">Taxa Basal</p>
+                    <p className="text-3xl font-black">{profile?.tmb?.toFixed(0)} <small className="text-sm font-normal">kcal</small></p>
                   </div>
-                  <div className="bg-emerald-50 p-5 rounded-3xl">
-                    <p className="text-[9px] font-black text-emerald-500 uppercase mb-1">Total</p>
-                    <p className="text-3xl font-black">{profile?.tdee?.toFixed(0)}</p>
+                  <div className="bg-emerald-50 p-5 rounded-3xl border border-emerald-100/30">
+                    <p className="text-[9px] font-black text-emerald-500 uppercase mb-1">Gasto Total</p>
+                    <p className="text-3xl font-black">{profile?.tdee?.toFixed(0)} <small className="text-sm font-normal">kcal</small></p>
                   </div>
                 </div>
               </div>
@@ -207,14 +216,25 @@ const App: React.FC = () => {
               
               <div className="space-y-4 relative">
                 <div className="space-y-1">
-                   <label className="text-[11px] font-black uppercase ml-2 block text-left">Nome do Alimento</label>
-                   <input type="text" placeholder="Arroz, Frango, Banana..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} onFocus={() => searchQuery.length >= 2 && setShowSuggestions(true)} className="w-full bg-slate-50 p-4 rounded-2xl font-black outline-none border-2 border-transparent focus:border-sky-100 transition-all placeholder-slate-300" />
+                   <label className="text-[11px] font-black uppercase ml-2 block text-left">Qual alimento? (Busca nas Tabelas)</label>
+                   <div className="relative">
+                      <input 
+                        type="text" 
+                        placeholder="Ex: Arroz branco, Frango, Banana..." 
+                        value={searchQuery} 
+                        onChange={e => setSearchQuery(e.target.value)} 
+                        onFocus={() => searchQuery.length >= 2 && setShowSuggestions(true)}
+                        onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                        className="w-full bg-slate-50 p-4 rounded-2xl font-black outline-none border-2 border-transparent focus:border-sky-100 transition-all placeholder-slate-300" 
+                      />
+                      {loading && <div className="absolute right-4 top-1/2 -translate-y-1/2"><i className="fas fa-circle-notch animate-spin text-sky-300"></i></div>}
+                   </div>
                    
                    {showSuggestions && suggestions.length > 0 && (
-                     <div className="absolute z-50 left-0 right-0 top-[72px] bg-white border border-slate-100 shadow-2xl rounded-2xl overflow-hidden fade-in">
+                     <div className="absolute z-50 left-0 right-0 top-[76px] bg-white border border-slate-100 shadow-2xl rounded-2xl overflow-hidden fade-in">
                        {suggestions.map((s, idx) => (
                          <div key={idx} onClick={() => { setSearchQuery(s); handleSearch(s); }} className="w-full text-left p-4 text-sm font-black text-slate-600 suggestion-item border-b border-slate-50 last:border-0 transition-colors">
-                           {s}
+                           <i className="fas fa-search text-slate-300 mr-2 text-[10px]"></i> {s}
                          </div>
                        ))}
                      </div>
@@ -229,10 +249,10 @@ const App: React.FC = () => {
                   <div className="col-span-4 space-y-1 text-left">
                     <label className="text-[11px] font-black uppercase ml-2">Unid.</label>
                     <select value={portionUnit} onChange={e => setPortionUnit(e.target.value)} className="w-full bg-slate-100 p-4 rounded-2xl font-black text-[10px] outline-none cursor-pointer uppercase">
-                      <option value="g">Grama</option>
-                      <option value="unidades">Unid.</option>
-                      <option value="fatias">Fatia</option>
-                      <option value="colheres de sopa">Colher</option>
+                      <option value="g">Gramas (g)</option>
+                      <option value="unidades">Unidades</option>
+                      <option value="fatias">Fatias</option>
+                      <option value="colheres de sopa">Colheres (s)</option>
                     </select>
                   </div>
                   <div className="col-span-4 pt-5">
@@ -282,7 +302,11 @@ const App: React.FC = () => {
             </div>
 
             <div className="space-y-3">
-              <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-widest px-4">Refeições Lançadas</h3>
+              <div className="flex justify-between items-center px-4">
+                 <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Histórico de Hoje</h3>
+                 <span className="text-[10px] font-black text-slate-300">{foods.length} itens</span>
+              </div>
+              
               {foods.map(f => (
                 <div key={f.id} className="bg-white p-5 rounded-[2rem] shadow-sm border border-slate-50 flex justify-between items-center hover:border-sky-100 transition-all fade-in group">
                   <div className="flex items-start gap-4">
@@ -291,17 +315,17 @@ const App: React.FC = () => {
                       <h4 className="font-black text-sm capitalize">{f.name}</h4>
                       <div className="flex gap-2 items-center">
                         <span className="text-[9px] font-black text-sky-400 bg-sky-50 px-2 py-0.5 rounded-md uppercase tracking-tighter">{f.meal}</span>
-                        <p className="text-[10px] text-slate-400 font-black uppercase">{f.portion} {portionUnit} • <span className="text-rose-300">{f.calories.toFixed(0)} kcal</span></p>
+                        <p className="text-[10px] text-slate-400 font-black uppercase">{f.portion} {f.portion > 1 ? 'unids' : 'unid'} • <span className="text-rose-300">{f.calories.toFixed(0)} kcal</span> • <span className="text-[9px] bg-slate-50 px-1 rounded text-slate-300">{f.source}</span></p>
                       </div>
                     </div>
                   </div>
-                  <button onClick={() => setFoods(prev => prev.filter(x => x.id !== f.id))} className="text-slate-100 group-hover:text-rose-300 p-3 hover:bg-rose-50 rounded-xl transition-all">
+                  <button onClick={() => setFoods(prev => prev.filter(x => x.id !== f.id))} className="text-slate-100 group-hover:text-rose-300 p-3 hover:bg-rose-50 rounded-xl transition-all active:scale-90">
                     <i className="fas fa-trash-can text-sm"></i>
                   </button>
                 </div>
               ))}
               {foods.length === 0 && (
-                <div className="bg-white/30 border-2 border-dashed border-slate-100 p-12 rounded-[3rem] text-center text-slate-300 text-[10px] font-black uppercase tracking-widest">Nenhum registro ainda</div>
+                <div className="bg-white/30 border-2 border-dashed border-slate-200/50 p-12 rounded-[3rem] text-center text-slate-300 text-[10px] font-black uppercase tracking-widest">Comece lançando sua primeira refeição</div>
               )}
             </div>
           </div>
