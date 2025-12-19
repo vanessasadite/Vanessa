@@ -7,6 +7,7 @@ import { searchFoodNutrition } from './geminiService';
 const USUARIOS_AUTORIZADOS = [
   { email: 'admin@nutricalc.com', chave: 'NUTRI123' },
   { email: 'teste@exemplo.com', chave: 'ALUNO2025' },
+  { email: 'nesschmidt@gmail.com', chave: 'ALUNO2025' },
 ];
 
 const LandingPage: React.FC<{ onUnlock: (email: string) => void }> = ({ onUnlock }) => {
