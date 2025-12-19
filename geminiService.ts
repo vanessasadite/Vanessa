@@ -2,44 +2,59 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { FoodItem } from "./types";
 
+const MODEL_NAME = "gemini-3-flash-preview";
+
+export const getFoodSuggestions = async (query: string): Promise<string[]> => {
+  const apiKey = process.env.API_KEY;
+  if (!apiKey || query.length < 2) return [];
+
+  const ai = new GoogleGenAI({ apiKey });
+  try {
+    const response = await ai.models.generateContent({
+      model: MODEL_NAME,
+      contents: `Liste 5 alimentos da tabela TACO ou TBCA que comecem ou contenham "${query}". Retorne apenas uma lista de strings em JSON ["item1", "item2", ...].`,
+      config: {
+        responseMimeType: "application/json",
+      }
+    });
+    return JSON.parse(response.text || "[]");
+  } catch (e) {
+    return [];
+  }
+};
+
 export const searchFoodNutrition = async (
   foodName: string, 
   quantity: number, 
-  unit: 'g' | 'fatias'
+  unit: string
 ): Promise<Partial<FoodItem> | null> => {
   const apiKey = process.env.API_KEY;
   if (!apiKey) return null;
 
   const ai = new GoogleGenAI({ apiKey });
 
-  // Prompt ultra-específico para garantir o uso das tabelas brasileiras
-  const prompt = `Você é um nutricionista brasileiro altamente preciso.
-  Busque os dados nutricionais de: "${quantity} ${unit} de ${foodName}".
+  const prompt = `Aja como um nutricionista calculando dieta.
+  ALIMENTO: "${foodName}"
+  QUANTIDADE: ${quantity} ${unit}
   
-  FONTES OBRIGATÓRIAS (Prioridade nesta ordem):
-  1. TACO (Tabela Brasileira de Composição de Alimentos)
-  2. TBCA (Tabela de Composição de Alimentos da USP)
-  3. Tabela de Tucunduva
-  4. IBGE (Pesquisa de Orçamentos Familiares)
-  5. USDA (Apenas se não houver nas brasileiras)
-
-  Se a unidade for "fatias", estime o peso médio de 1 fatia padrão para este alimento específico.
+  PROCEDIMENTO:
+  1. Localize este alimento prioritariamente na TACO (Tabela Brasileira de Composição de Alimentos) ou TBCA.
+  2. Se não houver, use Tucunduva, IBGE ou USDA.
+  3. Se a unidade for "fatias", "unidades" ou "colheres", converta para gramas usando pesos médios brasileiros oficiais.
   
-  Retorne APENAS um JSON válido seguindo este esquema:
+  RETORNO (JSON estrito):
   {
-    "name": "Nome do Alimento",
-    "calories": valor_kcal_total,
-    "carbs": valor_g_total,
-    "protein": valor_g_total,
-    "lipids": valor_g_total,
-    "source": "Nome da Tabela usada (Ex: TACO/TBCA)"
-  }
-  
-  Importante: Os valores devem ser proporcionais à quantidade de ${quantity} ${unit}.`;
+    "name": "Nome exato na tabela",
+    "calories": kcal_totais,
+    "carbs": g_carboidrato_total,
+    "protein": g_proteina_total,
+    "lipids": g_lipideos_total,
+    "source": "Fonte da Tabela (Ex: TACO 4ª Edição)"
+  }`;
 
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
+      model: MODEL_NAME,
       contents: prompt,
       config: {
         responseMimeType: "application/json",
@@ -62,7 +77,7 @@ export const searchFoodNutrition = async (
     if (!text) return null;
     return JSON.parse(text);
   } catch (error) {
-    console.error("Erro Gemini:", error);
+    console.error("Erro na consulta nutricional:", error);
     return null;
   }
 };
