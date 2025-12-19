@@ -1,0 +1,5 @@
+{
+  "name": " Calculadora Nutricional",
+  "description": "Calculadora de TMB e diário alimentar com dados das tabelas TACO, TBCA e USDA usando IA.",
+  "requestFramePermissions": []
+}
