@@ -7,32 +7,23 @@ import { searchFoodNutrition } from './geminiService';
 const USUARIOS_AUTORIZADOS = [
   { email: 'admin@nutricalc.com', chave: 'NUTRI123' },
   { email: 'teste@exemplo.com', chave: 'ALUNO2025' },
-  { email: 'nesschmidt@gmail.com', chave: 'ALUNO2025' },
 ];
 
 const LandingPage: React.FC<{ onUnlock: (email: string) => void }> = ({ onUnlock }) => {
   const [emailInput, setEmailInput] = useState('');
   const [passInput, setPassInput] = useState('');
   const [error, setError] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    setIsSubmitting(true);
-
     const emailLower = emailInput.toLowerCase().trim();
     const passLower = passInput.trim();
-
-    const usuario = USUARIOS_AUTORIZADOS.find(
-      u => u.email.toLowerCase() === emailLower && u.chave === passLower
-    );
-
+    const usuario = USUARIOS_AUTORIZADOS.find(u => u.email.toLowerCase() === emailLower && u.chave === passLower);
     if (usuario) {
       onUnlock(usuario.email);
     } else {
       setError('E-mail ou senha incorretos.');
-      setIsSubmitting(false);
     }
   };
 
@@ -42,35 +33,15 @@ const LandingPage: React.FC<{ onUnlock: (email: string) => void }> = ({ onUnlock
         <div className="space-y-2">
           <i className="fas fa-apple-whole text-5xl text-rose-300 mb-2"></i>
           <h1 className="text-4xl font-black text-slate-700">NutriCalc</h1>
-          <p className="text-slate-400 text-sm">Acesse sua calculadora nutricional</p>
+          <p className="text-slate-400 text-sm font-medium">Controle nutricional inteligente</p>
         </div>
-
-        <div className="bg-white p-8 rounded-[2.5rem] shadow-xl shadow-rose-100/20 border border-rose-50 space-y-4">
+        <div className="bg-white p-8 rounded-[2.5rem] shadow-xl shadow-rose-100/20 border border-rose-50">
           <form onSubmit={handleSubmit} className="space-y-4">
-            <input 
-              type="email" 
-              required 
-              placeholder="E-mail" 
-              value={emailInput}
-              onChange={e => setEmailInput(e.target.value)}
-              className="w-full bg-slate-50 p-4 rounded-2xl outline-none focus:ring-2 focus:ring-rose-100 font-medium" 
-            />
-            <input 
-              type="password" 
-              required 
-              placeholder="Senha" 
-              value={passInput}
-              onChange={e => setPassInput(e.target.value)}
-              className="w-full bg-slate-50 p-4 rounded-2xl outline-none focus:ring-2 focus:ring-rose-100 font-bold" 
-            />
+            <input type="email" required placeholder="E-mail" value={emailInput} onChange={e => setEmailInput(e.target.value)} className="w-full bg-slate-50 p-4 rounded-2xl outline-none focus:ring-2 focus:ring-rose-100 font-medium" />
+            <input type="password" required placeholder="Senha" value={passInput} onChange={e => setPassInput(e.target.value)} className="w-full bg-slate-50 p-4 rounded-2xl outline-none focus:ring-2 focus:ring-rose-100 font-bold" />
             {error && <p className="text-rose-400 text-xs font-bold">{error}</p>}
-            <button type="submit" className="w-full bg-slate-800 text-white font-bold py-4 rounded-2xl active:scale-95 transition-all">
-              ENTRAR
-            </button>
+            <button type="submit" className="w-full bg-slate-800 text-white font-bold py-4 rounded-2xl active:scale-95 transition-all">ENTRAR</button>
           </form>
-          <button onClick={() => { localStorage.clear(); window.location.reload(); }} className="text-[10px] text-slate-300 uppercase font-bold tracking-widest">
-            Limpar Cache do Site
-          </button>
         </div>
       </div>
     </div>
@@ -87,7 +58,7 @@ const App: React.FC = () => {
   const [selectedMeal, setSelectedMeal] = useState<MealType>('Café da Manhã');
   const [showTmbForm, setShowTmbForm] = useState(true);
 
-  // States de Formulário
+  // States do Formulário de Metas
   const [weight, setWeight] = useState(70);
   const [height, setHeight] = useState(170);
   const [age, setAge] = useState(30);
@@ -101,13 +72,8 @@ const App: React.FC = () => {
       if (email) setUserEmail(email);
       if (data) {
         const parsed = JSON.parse(data);
-        if (parsed?.profile) {
-          setProfile(parsed.profile);
-          setShowTmbForm(false);
-        }
-        if (Array.isArray(parsed?.foods)) {
-          setFoods(parsed.foods);
-        }
+        if (parsed?.profile) { setProfile(parsed.profile); setShowTmbForm(false); }
+        if (Array.isArray(parsed?.foods)) setFoods(parsed.foods);
       }
     } catch (e) { console.error(e); }
   }, []);
@@ -120,12 +86,12 @@ const App: React.FC = () => {
   }, [profile, foods, userEmail]);
 
   const totals = useMemo(() => {
-    if (!Array.isArray(foods)) return { calories: 0, carbs: 0, protein: 0, lipids: 0 };
+    if (!foods || foods.length === 0) return { calories: 0, carbs: 0, protein: 0, lipids: 0 };
     return foods.reduce((acc, f) => ({
-      calories: acc.calories + (f.calories || 0),
-      carbs: acc.carbs + (f.carbs || 0),
-      protein: acc.protein + (f.protein || 0),
-      lipids: acc.lipids + (f.lipids || 0)
+      calories: acc.calories + (Number(f.calories) || 0),
+      carbs: acc.carbs + (Number(f.carbs) || 0),
+      protein: acc.protein + (Number(f.protein) || 0),
+      lipids: acc.lipids + (Number(f.lipids) || 0)
     }), { calories: 0, carbs: 0, protein: 0, lipids: 0 });
   }, [foods]);
 
@@ -137,23 +103,16 @@ const App: React.FC = () => {
 
   if (!userEmail) return <LandingPage onUnlock={setUserEmail} />;
 
-  const handleLogout = () => {
-    if (confirm('Sair agora?')) {
-      localStorage.removeItem('nutri_user_email');
-      setUserEmail(null);
-    }
-  };
-
   const calculateTmb = (e: React.FormEvent) => {
     e.preventDefault();
-    const tmb = gender === Gender.MALE 
+    const tmbVal = gender === Gender.MALE 
       ? (10 * weight) + (6.25 * height) - (5 * age) + 5
       : (10 * weight) + (6.25 * height) - (5 * age) - 161;
-    const tdee = tmb * activity;
-    const imc = weight / ((height / 100) ** 2);
-    const imcClass = imc < 18.5 ? 'Abaixo do peso' : imc < 25 ? 'Normal' : imc < 30 ? 'Sobrepeso' : 'Obesidade';
+    const tdeeVal = tmbVal * activity;
+    const imcVal = weight / ((height / 100) ** 2);
+    const imcClass = imcVal < 18.5 ? 'Abaixo do peso' : imcVal < 25 ? 'Normal' : imcVal < 30 ? 'Sobrepeso' : 'Obesidade';
     
-    setProfile({ weight, height, age, gender, activityLevel: activity, tmb, tdee, imc, imcClassification: imcClass });
+    setProfile({ weight, height, age, gender, activityLevel: activity, tmb: tmbVal, tdee: tdeeVal, imc: imcVal, imcClassification: imcClass });
     setShowTmbForm(false);
   };
 
@@ -163,27 +122,29 @@ const App: React.FC = () => {
     try {
       const result = await searchFoodNutrition(searchQuery);
       if (result) {
-        const factor = (portionInput || 100) / 100;
+        const factor = Number(portionInput || 100) / 100;
         const newItem: FoodItem = {
           id: Math.random().toString(36).substr(2, 9),
           name: result.name || searchQuery,
-          calories: (result.calories || 0) * factor,
-          carbs: (result.carbs || 0) * factor,
-          protein: (result.protein || 0) * factor,
-          lipids: (result.lipids || 0) * factor,
-          portion: portionInput,
+          calories: (Number(result.calories) || 0) * factor,
+          carbs: (Number(result.carbs) || 0) * factor,
+          protein: (Number(result.protein) || 0) * factor,
+          lipids: (Number(result.lipids) || 0) * factor,
+          portion: Number(portionInput),
           source: result.source || 'IA',
           meal: selectedMeal
         };
         setFoods(prev => [newItem, ...prev]);
         setSearchQuery('');
+      } else {
+        alert("Alimento não encontrado. Tente descrever melhor.");
       }
-    } catch (e) { alert("Erro ao buscar."); }
+    } catch (e) { alert("Erro ao buscar dados."); }
     finally { setLoading(false); }
   };
 
   return (
-    <div className="min-h-screen bg-[#fdfcf0] fade-in">
+    <div className="min-h-screen bg-[#fdfcf0] fade-in pb-12">
       <div className="max-w-5xl mx-auto p-4 md:p-8">
         <header className="mb-8 flex justify-between items-center bg-white p-5 rounded-3xl shadow-sm border border-slate-50">
           <div className="flex items-center gap-3">
@@ -192,119 +153,160 @@ const App: React.FC = () => {
             </div>
             <h1 className="text-xl font-black text-slate-700">NutriCalc</h1>
           </div>
-          <button onClick={handleLogout} className="text-slate-200 hover:text-rose-400 p-2"><i className="fas fa-power-off"></i></button>
+          <button onClick={() => { if(confirm('Sair?')) setUserEmail(null); }} className="text-slate-200 hover:text-rose-400 p-2 transition-colors">
+            <i className="fas fa-power-off"></i>
+          </button>
         </header>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           <div className="lg:col-span-5 space-y-6">
             {showTmbForm ? (
               <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-50">
-                <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6 text-center">Configurar Metas</h2>
-                <form onSubmit={calculateTmb} className="space-y-4">
+                <h2 className="text-[11px] font-black text-slate-500 uppercase tracking-widest mb-6 text-center">Configurar Seus Dados</h2>
+                <form onSubmit={calculateTmb} className="space-y-6">
                   <div className="grid grid-cols-2 gap-4">
-                    <input type="number" placeholder="Peso" value={weight} onChange={e => setWeight(Number(e.target.value))} className="bg-slate-50 p-4 rounded-2xl outline-none w-full font-bold" />
-                    <input type="number" placeholder="Altura" value={height} onChange={e => setHeight(Number(e.target.value))} className="bg-slate-50 p-4 rounded-2xl outline-none w-full font-bold" />
+                    <div className="space-y-1.5 text-left">
+                      <label className="text-[10px] font-black text-slate-600 uppercase ml-2 block">Peso atual (kg)</label>
+                      <input type="number" step="0.1" value={weight} onChange={e => setWeight(Number(e.target.value))} className="bg-slate-50 p-4 rounded-2xl outline-none w-full font-bold focus:ring-2 focus:ring-rose-200 transition-all" />
+                    </div>
+                    <div className="space-y-1.5 text-left">
+                      <label className="text-[10px] font-black text-slate-600 uppercase ml-2 block">Altura (cm)</label>
+                      <input type="number" value={height} onChange={e => setHeight(Number(e.target.value))} className="bg-slate-50 p-4 rounded-2xl outline-none w-full font-bold focus:ring-2 focus:ring-rose-200 transition-all" />
+                    </div>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
-                    <input type="number" placeholder="Idade" value={age} onChange={e => setAge(Number(e.target.value))} className="bg-slate-50 p-4 rounded-2xl outline-none w-full font-bold" />
-                    <select value={gender} onChange={e => setGender(e.target.value as Gender)} className="bg-slate-50 p-4 rounded-2xl w-full font-bold">
-                      <option value={Gender.MALE}>Masc</option>
-                      <option value={Gender.FEMALE}>Fem</option>
+                    <div className="space-y-1.5 text-left">
+                      <label className="text-[10px] font-black text-slate-600 uppercase ml-2 block">Sua Idade</label>
+                      <input type="number" value={age} onChange={e => setAge(Number(e.target.value))} className="bg-slate-50 p-4 rounded-2xl outline-none w-full font-bold focus:ring-2 focus:ring-rose-200 transition-all" />
+                    </div>
+                    <div className="space-y-1.5 text-left">
+                      <label className="text-[10px] font-black text-slate-600 uppercase ml-2 block">Gênero</label>
+                      <select value={gender} onChange={e => setGender(e.target.value as Gender)} className="bg-slate-50 p-4 rounded-2xl w-full font-bold cursor-pointer focus:ring-2 focus:ring-rose-200">
+                        <option value={Gender.MALE}>Masc</option>
+                        <option value={Gender.FEMALE}>Fem</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div className="space-y-1.5 text-left">
+                    <label className="text-[10px] font-black text-slate-600 uppercase ml-2 block">Nível de Atividade</label>
+                    <select value={activity} onChange={e => setActivity(Number(e.target.value))} className="bg-slate-50 p-4 rounded-2xl w-full font-bold cursor-pointer focus:ring-2 focus:ring-rose-200">
+                      <option value={1.2}>Sedentário (Sem exercícios)</option>
+                      <option value={1.375}>Leve (1-3x por semana)</option>
+                      <option value={1.55}>Moderado (3-5x por semana)</option>
+                      <option value={1.725}>Intenso (Todos os dias)</option>
                     </select>
                   </div>
-                  <select value={activity} onChange={e => setActivity(Number(e.target.value))} className="bg-slate-50 p-4 rounded-2xl w-full font-bold">
-                    <option value={1.2}>Sedentário</option>
-                    <option value={1.375}>Leve (1-3x)</option>
-                    <option value={1.55}>Moderado (3-5x)</option>
-                    <option value={1.725}>Intenso (Todo dia)</option>
-                  </select>
-                  <button type="submit" className="w-full bg-rose-300 text-white font-black p-4 rounded-2xl shadow-md">CALCULAR AGORA</button>
+                  <button type="submit" className="w-full bg-rose-300 text-white font-black py-5 rounded-2xl shadow-lg shadow-rose-100 hover:bg-rose-400 active:scale-95 transition-all">CALCULAR AGORA</button>
                 </form>
               </div>
             ) : (
               <div className="bg-white p-6 rounded-[2.5rem] shadow-sm border border-rose-50 space-y-4">
                 <div className="flex justify-between items-center px-2">
-                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Seu Metabolismo</span>
-                  <button onClick={() => setShowTmbForm(true)} className="text-[9px] font-bold text-rose-300 uppercase underline">Editar</button>
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Seu Metabolismo</span>
+                  <button onClick={() => setShowTmbForm(true)} className="text-[10px] font-bold text-rose-300 uppercase underline">Alterar Dados</button>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
-                  <div className="bg-rose-50 p-4 rounded-2xl text-center">
-                    <p className="text-[8px] font-black text-rose-300 uppercase">Gasto Basal</p>
-                    <p className="text-2xl font-black text-slate-700">{profile?.tmb?.toFixed(0) || 0}</p>
+                  <div className="bg-rose-50 p-5 rounded-3xl text-center border border-rose-100/30">
+                    <p className="text-[9px] font-black text-rose-300 uppercase mb-1">Basal (TMB)</p>
+                    <p className="text-3xl font-black text-slate-700">{profile?.tmb?.toFixed(0) || 0}<span className="text-xs ml-1 opacity-40">kcal</span></p>
                   </div>
-                  <div className="bg-emerald-50 p-4 rounded-2xl text-center">
-                    <p className="text-[8px] font-black text-emerald-500 uppercase">Gasto Total</p>
-                    <p className="text-2xl font-black text-slate-700">{profile?.tdee?.toFixed(0) || 0}</p>
+                  <div className="bg-emerald-50 p-5 rounded-3xl text-center border border-emerald-100/30">
+                    <p className="text-[9px] font-black text-emerald-500 uppercase mb-1">Gasto Total (TDEE)</p>
+                    <p className="text-3xl font-black text-slate-700">{profile?.tdee?.toFixed(0) || 0}<span className="text-xs ml-1 opacity-40">kcal</span></p>
                   </div>
+                </div>
+                <div className="bg-slate-50 p-4 rounded-2xl flex justify-between items-center px-6">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase">IMC: <strong>{profile?.imc?.toFixed(1)}</strong></span>
+                  <span className="text-[10px] font-black text-slate-600 uppercase tracking-wide">{profile?.imcClassification}</span>
                 </div>
               </div>
             )}
 
             <div className="bg-white p-6 rounded-[2.5rem] shadow-sm border border-slate-50 space-y-4">
-              <h2 className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-2">Adicionar Alimento</h2>
-              <div className="flex flex-wrap gap-1 px-2">
+              <h2 className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-2 text-left">Adicionar Refeição</h2>
+              <div className="flex flex-wrap gap-1.5 px-2">
                 {MEAL_TYPES.map(m => (
-                  <button key={m} onClick={() => setSelectedMeal(m)} className={`text-[8px] px-3 py-1.5 rounded-full font-bold transition-all ${selectedMeal === m ? 'bg-sky-400 text-white' : 'bg-slate-50 text-slate-300'}`}>{m}</button>
+                  <button key={m} onClick={() => setSelectedMeal(m)} className={`text-[9px] px-4 py-2 rounded-full font-bold transition-all ${selectedMeal === m ? 'bg-sky-400 text-white shadow-md' : 'bg-slate-50 text-slate-400 hover:bg-slate-100'}`}>{m}</button>
                 ))}
               </div>
-              <input type="text" placeholder="Ex: Frango grelhado..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="w-full bg-slate-50 p-4 rounded-2xl font-bold outline-none focus:ring-2 focus:ring-sky-50" />
-              <div className="flex gap-2">
-                <input type="number" value={portionInput} onChange={e => setPortionInput(Number(e.target.value))} className="w-20 bg-slate-50 p-4 rounded-2xl font-bold" />
-                <button onClick={handleSearch} disabled={loading} className="flex-1 bg-sky-400 text-white font-black rounded-2xl hover:bg-sky-500 disabled:opacity-50">
-                  {loading ? 'BUSCANDO...' : 'ADICIONAR'}
-                </button>
+              <div className="space-y-3">
+                <input type="text" placeholder="Ex: 2 ovos cozidos, pão integral..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="w-full bg-slate-50 p-4 rounded-2xl font-bold outline-none border-2 border-transparent focus:border-sky-100" />
+                <div className="flex gap-2">
+                  <div className="relative flex-shrink-0">
+                    <input type="number" value={portionInput} onChange={e => setPortionInput(Number(e.target.value))} className="w-24 bg-slate-50 p-4 rounded-2xl font-bold text-center" />
+                    <span className="absolute -top-2 left-3 bg-white px-1 text-[8px] font-black text-slate-300 uppercase">Gramas</span>
+                  </div>
+                  <button onClick={handleSearch} disabled={loading || !searchQuery} className="flex-1 bg-sky-400 text-white font-black rounded-2xl hover:bg-sky-500 disabled:opacity-30 active:scale-95 transition-all flex items-center justify-center gap-2">
+                    {loading ? <i className="fas fa-circle-notch animate-spin"></i> : <i className="fas fa-plus"></i>}
+                    {loading ? 'BUSCANDO...' : 'ADICIONAR'}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
 
           <div className="lg:col-span-7 space-y-6">
             <div className="bg-white p-8 rounded-[3rem] shadow-sm border border-slate-50">
-              <div className="flex flex-col md:flex-row items-center gap-8">
-                <div className="w-48 h-48 relative">
+              <div className="flex flex-col md:flex-row items-center gap-10">
+                <div className="w-56 h-56 relative group">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
-                      <Pie data={chartData} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value" stroke="none">
+                      <Pie data={chartData} cx="50%" cy="50%" innerRadius={65} outerRadius={90} paddingAngle={6} dataKey="value" stroke="none">
                         {chartData.map((e, i) => <Cell key={i} fill={e.color} />)}
                       </Pie>
-                      <Tooltip />
+                      <Tooltip contentStyle={{ borderRadius: '15px', border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.05)' }} />
                     </PieChart>
                   </ResponsiveContainer>
                   <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                    <span className="text-2xl font-black text-slate-700">{totals.calories.toFixed(0)}</span>
-                    <span className="text-[8px] font-bold text-slate-300 uppercase">kcal hoje</span>
+                    <span className="text-3xl font-black text-slate-700">{totals.calories.toFixed(0)}</span>
+                    <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">kcal total</span>
                   </div>
                 </div>
-                <div className="flex-1 space-y-2 w-full">
+                <div className="flex-1 space-y-3 w-full">
                    {[
-                     { l: 'Carboidratos', v: totals.carbs, c: 'bg-[#f9d5e5]', t: 'text-rose-300' },
+                     { l: 'Carboidratos', v: totals.carbs, c: 'bg-[#f9d5e5]', t: 'text-rose-400' },
                      { l: 'Proteínas', v: totals.protein, c: 'bg-[#b8d8be]', t: 'text-emerald-500' },
                      { l: 'Gorduras', v: totals.lipids, c: 'bg-[#eeac99]', t: 'text-orange-400' }
                    ].map(m => (
-                     <div key={m.l} className="flex justify-between items-center bg-slate-50/50 p-3 rounded-xl">
-                       <div className="flex items-center gap-2">
-                         <div className={`w-2 h-2 rounded-full ${m.c}`}></div>
-                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{m.l}</span>
+                     <div key={m.l} className="flex justify-between items-center bg-slate-50/70 p-4 rounded-2xl border border-white">
+                       <div className="flex items-center gap-3">
+                         <div className={`w-3 h-3 rounded-full ${m.c} shadow-sm`}></div>
+                         <span className="text-[11px] font-black text-slate-500 uppercase tracking-wider">{m.l}</span>
                        </div>
-                       <span className={`font-black ${m.t}`}>{m.v.toFixed(1)}g</span>
+                       <span className={`text-lg font-black ${m.t}`}>{m.v.toFixed(1)}<small className="text-[10px] ml-0.5">g</small></span>
                      </div>
                    ))}
                 </div>
               </div>
             </div>
 
-            <div className="space-y-3">
-              {foods.length > 0 && <h3 className="text-[9px] font-black text-slate-300 uppercase tracking-widest px-4">Alimentos de Hoje</h3>}
+            <div className="space-y-3 text-left">
+              <div className="flex justify-between items-center px-4">
+                <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Diário Alimentar</h3>
+                {foods.length > 0 && <button onClick={() => { if(confirm('Limpar tudo?')) setFoods([]); }} className="text-[9px] font-bold text-slate-300 uppercase hover:text-rose-400 transition-colors">Limpar Hoje</button>}
+              </div>
               {foods.map(f => (
-                <div key={f.id} className="bg-white p-5 rounded-3xl shadow-sm border border-slate-50 flex justify-between items-center group">
-                  <div>
-                    <h4 className="font-black text-slate-600 text-sm capitalize">{f.name}</h4>
-                    <p className="text-[9px] text-slate-300 font-bold uppercase">{f.meal} • {f.portion}g • <span className="text-rose-300">{f.calories.toFixed(0)} kcal</span></p>
+                <div key={f.id} className="bg-white p-5 rounded-3xl shadow-sm border border-slate-50 flex justify-between items-center group hover:border-rose-100 transition-all">
+                  <div className="flex items-start gap-4">
+                    <div className="mt-1 w-2 h-2 rounded-full bg-slate-100 group-hover:bg-rose-200 transition-colors"></div>
+                    <div>
+                      <h4 className="font-black text-slate-700 text-sm capitalize leading-tight">{f.name}</h4>
+                      <div className="flex gap-2 items-center mt-1">
+                        <span className="text-[10px] font-bold text-sky-400 bg-sky-50 px-2 py-0.5 rounded-md">{f.meal}</span>
+                        <span className="text-[10px] text-slate-300 font-bold uppercase">{f.portion}g • <span className="text-rose-300">{f.calories.toFixed(0)} kcal</span></span>
+                      </div>
+                    </div>
                   </div>
-                  <button onClick={() => setFoods(prev => prev.filter(x => x.id !== f.id))} className="text-slate-100 group-hover:text-rose-300 transition-colors p-2"><i className="fas fa-trash"></i></button>
+                  <button onClick={() => setFoods(prev => prev.filter(x => x.id !== f.id))} className="text-slate-100 group-hover:text-rose-300 transition-colors p-3 hover:bg-rose-50 rounded-xl">
+                    <i className="fas fa-trash-can"></i>
+                  </button>
                 </div>
               ))}
               {foods.length === 0 && (
-                <div className="bg-white/50 border-2 border-dashed border-slate-100 p-12 rounded-[2.5rem] text-center text-slate-200 text-xs italic">Seu diário está vazio. Adicione um alimento para começar.</div>
+                <div className="bg-white/40 border-2 border-dashed border-slate-100 p-16 rounded-[3rem] text-center">
+                  <i className="fas fa-utensils text-slate-100 text-4xl mb-4 block"></i>
+                  <p className="text-slate-300 text-xs font-bold uppercase tracking-widest">Comece a registrar sua alimentação acima</p>
+                </div>
               )}
             </div>
           </div>
