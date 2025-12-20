@@ -58,7 +58,7 @@ const App: React.FC = () => {
       } else {
         setShowSuggestions(false);
       }
-    }, 300);
+    }, 400);
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
@@ -71,14 +71,11 @@ const App: React.FC = () => {
     }), { calories: 0, carbs: 0, protein: 0, lipids: 0 });
   }, [foods]);
 
-  const chartData = useMemo(() => {
-    const data = [
-      { name: 'Carbos', value: totals.carbs || 0.0001, color: '#f9d5e5' },
-      { name: 'Proteínas', value: totals.protein || 0.0001, color: '#b8d8be' },
-      { name: 'Gorduras', value: totals.lipids || 0.0001, color: '#eeac99' },
-    ];
-    return data;
-  }, [totals]);
+  const chartData = useMemo(() => [
+    { name: 'Carbos', value: totals.carbs || 0.01, color: '#f9d5e5' },
+    { name: 'Proteínas', value: totals.protein || 0.01, color: '#b8d8be' },
+    { name: 'Gorduras', value: totals.lipids || 0.01, color: '#eeac99' },
+  ], [totals]);
 
   const handleSearch = async (forcedQuery?: string) => {
     const q = forcedQuery || searchQuery;
@@ -104,11 +101,10 @@ const App: React.FC = () => {
         setSearchQuery('');
         setSuggestions([]);
       } else {
-        alert("Não conseguimos encontrar dados exatos agora. Tente novamente com um termo mais simples.");
+        alert("Não encontramos dados precisos. Tente um termo mais simples (ex: Arroz, Frango, Maçã).");
       }
     } catch (e) {
-      console.error(e);
-      alert("Houve um erro técnico na busca. Tente novamente em instantes.");
+      alert("Erro ao buscar dados. Tente novamente.");
     } finally {
       setLoading(false);
     }
@@ -125,17 +121,17 @@ const App: React.FC = () => {
           const pass = loginPassRef.current?.value.trim();
           const user = USUARIOS_AUTORIZADOS.find(u => u.email === email && u.chave === pass);
           if (user) setUserEmail(user.email);
-          else alert('E-mail ou chave incorretos.');
+          else alert('Acesso negado.');
         }} className="space-y-4 text-left">
-          <div className="space-y-1">
-            <label className="text-[10px] font-black uppercase ml-2">Seu E-mail</label>
-            <input ref={loginEmailRef} type="email" placeholder="email@exemplo.com" required className="w-full bg-slate-50 p-4 rounded-2xl outline-none border-2 border-transparent focus:border-rose-100 font-bold" />
+          <div>
+            <label className="text-[10px] font-black uppercase ml-2 mb-1 block">E-mail</label>
+            <input ref={loginEmailRef} type="email" placeholder="seu@email.com" required className="w-full bg-slate-50 p-4 rounded-2xl outline-none border-2 border-transparent focus:border-rose-100 font-bold" />
           </div>
-          <div className="space-y-1">
-            <label className="text-[10px] font-black uppercase ml-2">Chave Nutri</label>
+          <div>
+            <label className="text-[10px] font-black uppercase ml-2 mb-1 block">Senha</label>
             <input ref={loginPassRef} type="password" placeholder="••••••••" required className="w-full bg-slate-50 p-4 rounded-2xl outline-none border-2 border-transparent focus:border-rose-100 font-bold" />
           </div>
-          <button type="submit" className="w-full bg-slate-800 text-white font-black py-4 rounded-2xl active:scale-95 transition-all mt-4">ENTRAR NO DIÁRIO</button>
+          <button type="submit" className="w-full bg-slate-800 text-white font-black py-4 rounded-2xl active:scale-95 transition-all mt-4 shadow-lg">ENTRAR</button>
         </form>
       </div>
     </div>
@@ -146,17 +142,17 @@ const App: React.FC = () => {
       <div className="max-w-5xl mx-auto p-4 md:p-8">
         <header className="mb-8 flex justify-between items-center bg-white p-6 rounded-[2rem] shadow-sm border border-rose-50/50">
           <div className="flex items-center gap-3">
-            <i className="fas fa-apple-whole text-2xl text-rose-300"></i>
-            <h1 className="text-xl font-black">Calculadora Nutricional</h1>
+            <i className="fas fa-leaf text-2xl text-emerald-300"></i>
+            <h1 className="text-xl font-black tracking-tight">Diário Nutricional</h1>
           </div>
-          <button onClick={() => { localStorage.clear(); window.location.reload(); }} className="text-slate-300 hover:text-rose-400 p-2 transition-colors"><i className="fas fa-power-off"></i></button>
+          <button onClick={() => { localStorage.clear(); window.location.reload(); }} className="text-slate-200 hover:text-rose-400 p-2"><i className="fas fa-power-off"></i></button>
         </header>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           <div className="lg:col-span-5 space-y-6">
             {showTmbForm ? (
               <div className="bg-white p-8 rounded-[3rem] shadow-sm border border-slate-50">
-                <h2 className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-6 text-center">Perfil de TMB</h2>
+                <h2 className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-6 text-center">Cálculo de TMB</h2>
                 <form onSubmit={(e) => {
                   e.preventDefault();
                   const tmbVal = gender === Gender.MALE 
@@ -164,54 +160,54 @@ const App: React.FC = () => {
                     : (10 * weight) + (6.25 * height) - (5 * age) - 161;
                   setProfile({ weight, height, age, gender, activityLevel: activity, tmb: tmbVal, tdee: tmbVal * activity, imc: weight / ((height / 100) ** 2), imcClassification: 'Normal' });
                   setShowTmbForm(false);
-                }} className="space-y-5 text-left">
+                }} className="space-y-5 text-left font-bold">
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1">
                       <label className="text-[11px] font-black uppercase ml-2">Peso (kg)</label>
-                      <input type="number" step="0.1" value={weight} onChange={e => setWeight(Number(e.target.value))} className="bg-slate-50 p-4 rounded-2xl w-full font-black outline-none border-2 border-transparent focus:border-rose-100" />
+                      <input type="number" step="0.1" value={weight} onChange={e => setWeight(Number(e.target.value))} className="bg-slate-50 p-4 rounded-2xl w-full border-2 border-transparent focus:border-rose-100 outline-none" />
                     </div>
                     <div className="space-y-1">
                       <label className="text-[11px] font-black uppercase ml-2">Altura (cm)</label>
-                      <input type="number" value={height} onChange={e => setHeight(Number(e.target.value))} className="bg-slate-50 p-4 rounded-2xl w-full font-black outline-none border-2 border-transparent focus:border-rose-100" />
+                      <input type="number" value={height} onChange={e => setHeight(Number(e.target.value))} className="bg-slate-50 p-4 rounded-2xl w-full border-2 border-transparent focus:border-rose-100 outline-none" />
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1">
                       <label className="text-[11px] font-black uppercase ml-2">Idade</label>
-                      <input type="number" value={age} onChange={e => setAge(Number(e.target.value))} className="bg-slate-50 p-4 rounded-2xl w-full font-black outline-none border-2 border-transparent focus:border-rose-100" />
+                      <input type="number" value={age} onChange={e => setAge(Number(e.target.value))} className="bg-slate-50 p-4 rounded-2xl w-full border-2 border-transparent focus:border-rose-100 outline-none" />
                     </div>
                     <div className="space-y-1">
                       <label className="text-[11px] font-black uppercase ml-2">Gênero</label>
-                      <select value={gender} onChange={e => setGender(e.target.value as Gender)} className="bg-slate-50 p-4 rounded-2xl w-full font-black outline-none cursor-pointer">
+                      <select value={gender} onChange={e => setGender(e.target.value as Gender)} className="bg-slate-50 p-4 rounded-2xl w-full outline-none">
                         <option value={Gender.MALE}>Masculino</option>
                         <option value={Gender.FEMALE}>Feminino</option>
                       </select>
                     </div>
                   </div>
-                  <button type="submit" className="w-full bg-rose-300 text-white font-black py-5 rounded-2xl shadow-lg hover:bg-rose-400 transition-all active:scale-95">SALVAR PERFIL</button>
+                  <button type="submit" className="w-full bg-rose-200 text-rose-700 font-black py-5 rounded-2xl shadow-md hover:bg-rose-300 transition-all">SALVAR DADOS</button>
                 </form>
               </div>
             ) : (
               <div className="bg-white p-6 rounded-[2.5rem] shadow-sm border border-rose-50 space-y-4">
                 <div className="flex justify-between items-center px-2">
-                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Seu Gasto Calórico</span>
-                  <button onClick={() => setShowTmbForm(true)} className="text-[10px] font-black text-rose-300 underline uppercase">Editar</button>
+                  <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Resumo Energético</span>
+                  <button onClick={() => setShowTmbForm(true)} className="text-[10px] font-black text-rose-300 underline uppercase">Alterar</button>
                 </div>
                 <div className="grid grid-cols-2 gap-3 text-center">
-                  <div className="bg-rose-50 p-5 rounded-3xl border border-rose-100/30">
-                    <p className="text-[9px] font-black text-rose-300 uppercase mb-1">Basal</p>
-                    <p className="text-3xl font-black">{profile?.tmb?.toFixed(0)} <small className="text-sm font-normal">kcal</small></p>
+                  <div className="bg-rose-50 p-5 rounded-3xl">
+                    <p className="text-[9px] font-black text-rose-300 uppercase mb-1">Taxa Basal</p>
+                    <p className="text-3xl font-black">{profile?.tmb?.toFixed(0)} <span className="text-xs">kcal</span></p>
                   </div>
-                  <div className="bg-emerald-50 p-5 rounded-3xl border border-emerald-100/30">
-                    <p className="text-[9px] font-black text-emerald-500 uppercase mb-1">Diário (TDEE)</p>
-                    <p className="text-3xl font-black">{profile?.tdee?.toFixed(0)} <small className="text-sm font-normal">kcal</small></p>
+                  <div className="bg-emerald-50 p-5 rounded-3xl">
+                    <p className="text-[9px] font-black text-emerald-400 uppercase mb-1">Gasto Total</p>
+                    <p className="text-3xl font-black">{profile?.tdee?.toFixed(0)} <span className="text-xs">kcal</span></p>
                   </div>
                 </div>
               </div>
             )}
 
             <div className="bg-white p-6 rounded-[2.5rem] shadow-sm border border-slate-50 space-y-5">
-              <h2 className="text-[11px] font-black uppercase tracking-widest px-2 text-left">Lançar Alimento</h2>
+              <h2 className="text-[11px] font-black uppercase tracking-widest px-2 text-left">Lançamento de Refeição</h2>
               <div className="flex flex-wrap gap-1.5 px-2">
                 {MEAL_TYPES.map(m => (
                   <button key={m} onClick={() => setSelectedMeal(m)} className={`text-[9px] px-4 py-2 rounded-full font-black transition-all ${selectedMeal === m ? 'bg-sky-400 text-white shadow-md' : 'bg-slate-50 text-slate-400 hover:bg-slate-100'}`}>{m}</button>
@@ -220,25 +216,25 @@ const App: React.FC = () => {
               
               <div className="space-y-4 relative">
                 <div className="space-y-1 text-left">
-                   <label className="text-[11px] font-black uppercase ml-2 block">Nome (Busca TACO/TBCA/USDA)</label>
+                   <label className="text-[11px] font-black uppercase ml-2 block">Nome do Alimento</label>
                    <div className="relative">
                       <input 
                         type="text" 
-                        placeholder="Ex: Arroz, Frango, Banana..." 
+                        placeholder="Ex: Arroz branco, Frango grelhado..." 
                         value={searchQuery} 
                         onChange={e => setSearchQuery(e.target.value)} 
                         onFocus={() => searchQuery.length >= 2 && setShowSuggestions(true)}
                         onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
                         className="w-full bg-slate-50 p-4 rounded-2xl font-black outline-none border-2 border-transparent focus:border-sky-100 transition-all placeholder-slate-300" 
                       />
-                      {loading && <div className="absolute right-4 top-1/2 -translate-y-1/2"><i className="fas fa-circle-notch animate-spin text-sky-400 text-xl"></i></div>}
+                      {loading && <div className="absolute right-4 top-1/2 -translate-y-1/2"><i className="fas fa-spinner animate-spin text-sky-400"></i></div>}
                    </div>
                    
                    {showSuggestions && suggestions.length > 0 && (
                      <div className="absolute z-50 left-0 right-0 top-[76px] bg-white border border-slate-100 shadow-2xl rounded-2xl overflow-hidden fade-in">
                        {suggestions.map((s, idx) => (
                          <div key={idx} onClick={() => { setSearchQuery(s); handleSearch(s); }} className="w-full text-left p-4 text-sm font-black text-slate-600 suggestion-item border-b border-slate-50 last:border-0 transition-colors">
-                           <i className="fas fa-utensils text-slate-200 mr-3 text-[10px]"></i>{s}
+                           <i className="fas fa-search text-slate-200 mr-3 text-[10px]"></i>{s}
                          </div>
                        ))}
                      </div>
@@ -253,7 +249,7 @@ const App: React.FC = () => {
                   <div className="col-span-4 space-y-1 text-left">
                     <label className="text-[11px] font-black uppercase ml-2">Unid.</label>
                     <select value={portionUnit} onChange={e => setPortionUnit(e.target.value)} className="w-full bg-slate-100 p-4 rounded-2xl font-black text-[10px] outline-none cursor-pointer uppercase">
-                      <option value="g">Grama (g)</option>
+                      <option value="g">Gramas (g)</option>
                       <option value="unidades">Unidades</option>
                       <option value="fatias">Fatias</option>
                       <option value="colheres de sopa">Colheres (s)</option>
@@ -261,7 +257,7 @@ const App: React.FC = () => {
                   </div>
                   <div className="col-span-4 pt-5">
                     <button onClick={() => handleSearch()} disabled={loading || !searchQuery} className="w-full h-[58px] bg-sky-400 text-white font-black rounded-2xl hover:bg-sky-500 disabled:opacity-30 active:scale-95 transition-all flex items-center justify-center shadow-lg">
-                      {loading ? <i className="fas fa-spinner animate-spin"></i> : <i className="fas fa-plus"></i>}
+                      <i className="fas fa-plus"></i>
                     </button>
                   </div>
                 </div>
@@ -283,11 +279,11 @@ const App: React.FC = () => {
                   </ResponsiveContainer>
                   <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                     <span className="text-4xl font-black">{totals.calories.toFixed(0)}</span>
-                    <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">kcal totais</span>
+                    <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">kcal consumidas</span>
                   </div>
                 </div>
                 <div className="flex-1 space-y-3 w-full">
-                   <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-4">Macros Ingeridos</h3>
+                   <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-4">Divisão de Macros</h3>
                    {[
                      { l: 'Carboidratos', v: totals.carbs, c: 'bg-[#f9d5e5]', t: 'text-rose-300' },
                      { l: 'Proteínas', v: totals.protein, c: 'bg-[#b8d8be]', t: 'text-emerald-500' },
@@ -306,30 +302,27 @@ const App: React.FC = () => {
             </div>
 
             <div className="space-y-3">
-              <div className="flex justify-between items-center px-4">
-                 <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Histórico de Hoje</h3>
-                 <span className="text-[10px] font-black text-slate-300">{foods.length} registros</span>
-              </div>
-              
+              <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-widest px-4">Refeições de Hoje</h3>
               {foods.map(f => (
-                <div key={f.id} className="bg-white p-5 rounded-[2rem] shadow-sm border border-slate-50 flex justify-between items-center hover:border-sky-100 transition-all fade-in group">
+                <div key={f.id} className="bg-white p-5 rounded-[2rem] shadow-sm border border-slate-50 flex justify-between items-center hover:border-sky-50 transition-all fade-in group">
                   <div className="flex items-start gap-4">
-                    <div className="mt-1 w-2 h-2 rounded-full bg-sky-200"></div>
-                    <div>
+                    <div className="mt-1 w-2 h-2 rounded-full bg-emerald-200"></div>
+                    <div className="text-left">
                       <h4 className="font-black text-sm capitalize">{f.name}</h4>
                       <div className="flex gap-2 items-center">
                         <span className="text-[9px] font-black text-sky-400 bg-sky-50 px-2 py-0.5 rounded-md uppercase tracking-tighter">{f.meal}</span>
-                        <p className="text-[10px] text-slate-400 font-black uppercase">{f.portion} {portionUnit} • <span className="text-rose-300">{f.calories.toFixed(0)} kcal</span> • <span className="text-[8px] bg-slate-50 px-1 rounded text-slate-300 font-normal">{f.source}</span></p>
+                        <p className="text-[10px] text-slate-400 font-bold uppercase">{f.portion} {portionUnit} • <span className="text-rose-300">{f.calories.toFixed(0)} kcal</span></p>
                       </div>
+                      <span className="text-[8px] font-black text-slate-200 uppercase mt-1 block tracking-wider">Fonte: {f.source}</span>
                     </div>
                   </div>
-                  <button onClick={() => setFoods(prev => prev.filter(x => x.id !== f.id))} className="text-slate-100 group-hover:text-rose-300 p-3 hover:bg-rose-50 rounded-xl transition-all active:scale-90">
+                  <button onClick={() => setFoods(prev => prev.filter(x => x.id !== f.id))} className="text-slate-100 group-hover:text-rose-300 p-3 hover:bg-rose-50 rounded-xl transition-all">
                     <i className="fas fa-trash-can text-sm"></i>
                   </button>
                 </div>
               ))}
               {foods.length === 0 && (
-                <div className="bg-white/30 border-2 border-dashed border-slate-200/50 p-12 rounded-[3rem] text-center text-slate-300 text-[10px] font-black uppercase tracking-widest">Nada registrado hoje</div>
+                <div className="bg-white/40 border-2 border-dashed border-slate-100 p-12 rounded-[3rem] text-center text-slate-300 text-[10px] font-black uppercase tracking-widest">Aguardando seu primeiro lançamento</div>
               )}
             </div>
           </div>

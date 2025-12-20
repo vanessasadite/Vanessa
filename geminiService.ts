@@ -6,7 +6,6 @@ const MODEL_NAME = "gemini-3-flash-preview";
 
 const cleanJsonResponse = (text: string) => {
   if (!text) return "";
-  // Remove blocos de código markdown se existirem
   return text.replace(/```json/g, "").replace(/```/g, "").trim();
 };
 
@@ -18,7 +17,7 @@ export const getFoodSuggestions = async (query: string): Promise<string[]> => {
   try {
     const response = await ai.models.generateContent({
       model: MODEL_NAME,
-      contents: `Liste 5 alimentos brasileiros comuns que contenham "${query}". Retorne apenas um array JSON de strings: ["item1", "item2", ...]`,
+      contents: `Sugira 5 nomes de alimentos que contenham "${query}". Retorne APENAS um array JSON de strings: ["item1", "item2", ...]`,
       config: { responseMimeType: "application/json" }
     });
     const cleaned = cleanJsonResponse(response.text || "[]");
@@ -38,27 +37,30 @@ export const searchFoodNutrition = async (
 
   const ai = new GoogleGenAI({ apiKey });
 
-  // Prompt ultra-específico com foco total nas tabelas solicitadas
-  const prompt = `Você é um especialista em nutrição clínica e tabelas de composição de alimentos.
-  
-  Sua tarefa é extrair os dados nutricionais para: ${quantity} ${unit} de "${foodName}".
-  
-  REGRAS OBRIGATÓRIAS:
-  1. Use os dados exatos das tabelas: TACO (4ª Edição), TBCA, USDA, IBGE e Tucunduva.
-  2. Priorize tabelas brasileiras (TACO/TBCA).
-  3. Se o usuário fornecer uma medida caseira (fatias, colheres), converta primeiro para gramas (ex: 1 fatia de pão de forma = 25g) e então calcule os macros.
-  4. Retorne valores numéricos precisos.
-  5. Se o alimento for genérico como "Arroz", use "Arroz, integral, cozido" ou "Arroz, branco, cozido" conforme a busca sugerir.
-  6. Nunca retorne erro; se não encontrar o item exato, use a estimativa mais próxima da TACO.
+  // Prompt extremamente diretivo focado nas tabelas solicitadas
+  const prompt = `Aja como um banco de dados de Nutrição Humana. 
+  Consulte OBRIGATORIAMENTE nesta ordem de prioridade: 
+  1. TACO (Tabela Brasileira de Composição de Alimentos - Unicamp)
+  2. TBCA (Tabela Brasileira de Composição de Alimentos - USP)
+  3. IBGE (Pesquisa de Orçamentos Familiares)
+  4. Tucunduva (Tabela de Composição de Alimentos)
+  5. USDA (FoodData Central)
 
-  Sua resposta deve ser EXCLUSIVAMENTE um objeto JSON:
+  Busque os dados para: ${quantity} ${unit} de "${foodName}".
+
+  REGRAS:
+  - Se a unidade for caseira (colher, fatia, xícara), converta para gramas seguindo a Tucunduva ou IBGE antes de calcular.
+  - Se o alimento for genérico, use o correspondente padrão da TACO.
+  - Se não encontrar exatamente, forneça a melhor estimativa baseada nessas tabelas. NÃO RETORNE ERRO.
+  
+  Retorne APENAS o JSON:
   {
-    "name": "Nome do alimento na tabela",
-    "calories": calorias_totais_para_quantidade,
-    "carbs": carboidratos_em_gramas,
-    "protein": proteinas_em_gramas,
-    "lipids": gorduras_em_gramas,
-    "source": "Nome da Tabela usada (TACO, TBCA, etc)"
+    "name": "Nome do Alimento Conforme a Tabela",
+    "calories": calorias_totais_em_kcal,
+    "carbs": carboidratos_em_g,
+    "protein": proteinas_em_g,
+    "lipids": gorduras_em_g,
+    "source": "Nome da Tabela de Origem (Ex: TACO/Unicamp)"
   }`;
 
   try {
@@ -86,7 +88,11 @@ export const searchFoodNutrition = async (
     if (!cleaned) return null;
     return JSON.parse(cleaned);
   } catch (error) {
-    console.error("Erro na consulta nutricional:", error);
+    console.error("Erro na busca nutricional:", error);
+    // Fallback manual para evitar que o app trave em itens básicos caso a API falhe
+    if (foodName.toLowerCase().includes("arroz")) {
+        return { name: "Arroz branco, cozido", calories: 128 * (quantity/100), carbs: 28 * (quantity/100), protein: 2.5 * (quantity/100), lipids: 0.2 * (quantity/100), source: "TACO (Fallback)" };
+    }
     return null;
   }
 };
